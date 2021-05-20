@@ -1,0 +1,18 @@
+## Interface: 30300
+## Title: SWDEZ
+## SavedVariables:
+## Author: BannZay
+## Notes: Notifies you when to use shadow word death
+## DefaultState: Enabled
+## OptionalDeps:
+
+#@no-lib-strip@
+embeds.xml
+#@end-no-lib-strip@
+
+BannZay\Prototype.lua
+BannZay\Debug.lua
+BannZay\KVP.lua
+BannZay\Array.lua
+
+SWDEZ.lua
