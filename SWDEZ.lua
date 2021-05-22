@@ -1,5 +1,6 @@
 local Debug = BannZay.Logger;
 local Array = BannZay.Array;
+local KVP = BannZay.KVP;
 
 local debugLevel = 0;
 local debugTitle = "SWDEZ";
@@ -48,7 +49,7 @@ local function CreateFlashFrame()
 end
 
 local function AddUnit(triggeredUnit)
-	local triggeredUnitName = UnitName(triggeredUnit);
+	local triggeredUnitName = UnitGUID(triggeredUnit);
 	local kvp = KVP:New(GetTime(), triggeredUnitName);
 	local item2 = kvp:Item2();
 	dbg:Log(1, "Unit added:" .. triggeredUnitName);
@@ -56,10 +57,10 @@ local function AddUnit(triggeredUnit)
 end
 
 local function RemoveUnit(triggeredUnit)
-	local triggeredUnitName = UnitName(triggeredUnit);
+	local triggeredUnitName = UnitGUID(triggeredUnit);
 	
-	local index = triggeredUnitNames:Find(function(kvp) return kvp:Item2() == triggeredUnitName end);
-	
+	local item, index = triggeredUnitNames:Find(function(kvp) return kvp:Item2() == triggeredUnitName end);
+
 	if index ~= nil then
 		triggeredUnitNames:RemoveAt(index);
 		dbg:Log(1, "Unit removed:" .. triggeredUnitName);
@@ -95,11 +96,12 @@ function OnUpdate()
 			local kvp = triggeredUnitNames:All()[i];
 			if kvp ~= nil then
 				local addedTime = kvp:Item1();
-				local playerName = kvp:Item2();
+				local id = kvp:Item2();
 						
 				if (now - addedTime > lifeTimeSeconds) then
 					triggeredUnitNames:RemoveAt(i);
-					dbg.Log(0, "Alert was not removed in time, most likely there is a bug");
+					dbg:Log(0, "Alert was not removed in time, most likely there is a bug");
+					dbg:Log(1, "Id '" .. id .. "' was not removed in time");
 					i = i - 1;
 				end
 			end
