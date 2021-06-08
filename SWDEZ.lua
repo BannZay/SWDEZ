@@ -18,6 +18,8 @@ local function CreateTreatSkillNames()
 	treatSkillIds:Add(6358);  -- Seduction
 	treatSkillIds:Add(19503); -- Scatter Shot
 	treatSkillIds:Add(19386); -- Wyvern Sting
+	treatSkillIds:Add(60192); -- Freezing Arrow
+	treatSkillIds:Add(14311); -- Freezing Trap
 	
 	local names = Array:New();
 	
@@ -48,12 +50,17 @@ local function CreateFlashFrame()
 	return flashFrame;
 end
 
-local function AddUnit(triggeredUnit)
-	local triggeredUnitName = UnitGUID(triggeredUnit);
-	local kvp = KVP:New(GetTime(), triggeredUnitName);
-	local item2 = kvp:Item2();
-	dbg:Log(1, "Unit added:" .. triggeredUnitName);
+local function AddUnit(triggeredUnit, lifeTimeSeconds)
+	local triggeredUnitGuid = UnitGUID(triggeredUnit);
+	
+	if triggeredUnitNames:TranformAndFind(triggeredUnitGuid, function(x) return x:Item2() end) ~= nil then
+		return false;
+	end
+	
+	local kvp = KVP:New(GetTime() + lifeTimeSeconds, triggeredUnitGuid);
 	triggeredUnitNames:Add(kvp);
+	dbg:Log(1, "Unit added:" .. triggeredUnitGuid);
+	return true;
 end
 
 local function RemoveUnit(triggeredUnit)
@@ -78,6 +85,7 @@ function OnLoad()
 	for k, v in pairs(events) do
 		ControlFrame:RegisterEvent(k);
 	end
+	events:ZONE_CHANGED_NEW_AREA();
 
 	dbg:Log(2, "Loaded");
 	triggeredUnitNames = Array:New();
@@ -89,19 +97,17 @@ end
 
 function OnUpdate()
 	local now = GetTime();
-	local lifeTimeSeconds = 3; -- in case of unknown bug, it will stop falshes after 3 seconds
 	
 	if triggeredUnitNames:Count() ~= nil then
 		for i=1, triggeredUnitNames:Count(), 1 do
 			local kvp = triggeredUnitNames:All()[i];
 			if kvp ~= nil then
-				local addedTime = kvp:Item1();
+				local endTime = kvp:Item1();
 				local id = kvp:Item2();
 						
-				if (now - addedTime > lifeTimeSeconds) then
+				if (now > endTime) then
 					triggeredUnitNames:RemoveAt(i);
-					dbg:Log(0, "Alert was not removed in time, most likely there is a bug");
-					dbg:Log(1, "Id '" .. id .. "' was not removed in time");
+					dbg:Log(1, "Id '" .. id .. "' was automatically removed");
 					i = i - 1;
 				end
 			end
@@ -115,11 +121,44 @@ function OnUpdate()
 	end
 end
 
-function events:UNIT_SPELLCAST_START(unit, spellName)	
+local function OnCastDetected(unit, spellName, lifeTimeSeconds)
 	if UnitIsFriend("player", unit) then return end
 	if treatSkillNames:IndexOf(spellName) == nil then return end
 	if (string.match(unit, "pet") and UnitName("player") ~= UnitName(unit.."target")) then return end
-	AddUnit(unit)
+	
+	if AddUnit(unit, lifeTimeSeconds) == true then
+		PlaySoundFile("Interface\\AddOns\\SWDEZ\\Sounds\\thing.ogg")
+	end
+end
+
+
+function events:ZONE_CHANGED_NEW_AREA()
+	local type = select(2, IsInInstance())
+	
+	-- Check if we are entering or leaving an arena and call the functions	
+	if (type == "arena") then
+		ControlFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
+		ControlFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+	else
+		ControlFrame:UnregisterEvent("PLAYER_FOCUS_CHANGED")
+		ControlFrame:UnregisterEvent("PLAYER_TARGET_CHANGED")
+	end
+end
+
+function events:PLAYER_TARGET_CHANGED()
+	local name = UnitCastingInfo("target")
+	print(name)
+	if name ~= nil then
+		events:UNIT_SPELLCAST_START("target", name);
+	end
+end
+
+function events:UNIT_SPELLCAST_START(unit, spellName)
+	OnCastDetected(unit, spellName, 3);
+end
+
+function events:UNIT_SPELLCAST_SUCCEEDED(unit, spellName)
+	OnCastDetected(unit, spellName, 1);
 end
 
 function events:UNIT_SPELLCAST_STOP(unit, spellName, rankName, sourceFlags)
