@@ -1,6 +1,8 @@
-local Debug = BannZay.Logger;
-local Array = BannZay.Array;
-local KVP = BannZay.KVP;
+local BannZayLib = LibStub:GetLibrary("BannZayLib-1.0")
+
+local Debug = BannZayLib.Logger;
+local Array = BannZayLib.Array;
+local KVP = BannZayLib.KVP;
 
 local debugLevel = 0;
 local debugTitle = "SWDEZ";
@@ -11,6 +13,9 @@ local treatSkillNames = nil;
 local triggeredUnitNames = Array:New();
 
 local events = {}
+
+ControlFrame = CreateFrame("Frame", "SWDEZ");
+BannZayLib.Namespace:Register("BannZay.SWDEZ", ControlFrame);
 
 local function CreateTreatSkillNames()
 	local treatSkillIds = Array:New();
@@ -135,7 +140,6 @@ end
 function events:ZONE_CHANGED_NEW_AREA()
 	local type = select(2, IsInInstance())
 	
-	-- Check if we are entering or leaving an arena and call the functions	
 	if (type == "arena") then
 		ControlFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
 		ControlFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
@@ -147,7 +151,6 @@ end
 
 function events:PLAYER_TARGET_CHANGED()
 	local name = UnitCastingInfo("target")
-	print(name)
 	if name ~= nil then
 		events:UNIT_SPELLCAST_START("target", name);
 	end
@@ -169,5 +172,4 @@ function events:ZONE_CHANGED_NEW_AREA()
 	RemoveAllUnits();
 end
 
-ControlFrame = CreateFrame("Frame");
 OnLoad();
